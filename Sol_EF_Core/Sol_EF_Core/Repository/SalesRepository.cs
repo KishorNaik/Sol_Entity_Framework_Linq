@@ -244,6 +244,89 @@ namespace Sol_EF_Core.Repository
             });
         }
 
+        // Top By
+        public async Task<List<SalesOrderHeaderModel>> TopClauseQueryDemoAsync()
+        {
+            return await Task.Run(() => {
 
+                var data =
+                    adventureWorks2012Context
+                    ?.SalesOrderHeader
+                    ?.AsEnumerable()
+                    ?.Take(5)
+                    ?.Select(this.FuncSalesOrdersColumnsMapping())
+                    ?.ToList();
+
+                return data;
+            });
+
+        }
+
+        // Pagination
+        public async Task<List<SalesOrderHeaderModel>> PaginationQueryDemoAsync()
+        {
+            return await Task.Run(() => {
+
+                var data =
+                    adventureWorks2012Context
+                    ?.SalesOrderHeader
+                    ?.AsEnumerable()
+                    ?.Skip(1)
+                    ?.Take(10)
+                    ?.OrderBy((leSalesOrderHeader) => leSalesOrderHeader.SalesOrderId)
+                    ?.Select(this.FuncSalesOrdersColumnsMapping())
+                    ?.ToList();
+
+                return data;
+            
+            });
+        }
+
+        // Join (One to One)
+        public async Task<List<SalesOrderHeaderModel>> JoinQueryDemoAsync()
+        {
+            return await Task.Run(() => {
+
+                // get Sales Header Data
+                var salesOrderHeaderObj =
+                     adventureWorks2012Context
+                     ?.SalesOrderHeader
+                     ?.ToList();
+
+                // get Sales Details Data
+                var salesOrderDetailsData =
+                    adventureWorks2012Context
+                    ?.SalesOrderDetail
+                    ?.ToList();
+
+                var salesJoin =
+                    adventureWorks2012Context
+                    ?.SalesOrderHeader
+                    ?.Join<SalesOrderHeader, SalesOrderDetail, int, SalesOrderHeaderModel>(
+                                salesOrderDetailsData,
+                                (leSOH) => leSOH.SalesOrderId,
+                                (leSOD) => leSOD.SalesOrderId,
+                                (leSOH, leSOD) => new SalesOrderHeaderModel()
+                                {
+                                    SalesOrderID = leSOH.SalesOrderId,
+                                    PurchaseOrderNumber = leSOH.PurchaseOrderNumber,
+                                    SalesOrderNumber = leSOH.SalesOrderNumber,
+                                    SalesOrderDetails = new SalesOrderDetailsModel()
+                                    {
+                                        OrderQty = leSOD.OrderQty,
+                                        UnitPrice = leSOD.UnitPrice
+                                    }
+                                }
+                                )
+                    ?.OrderBy((leSalesOrderHeaderModel)=>leSalesOrderHeaderModel.SalesOrderID)
+                    ?.ThenBy((leSalesOrderHeaderModel)=>leSalesOrderHeaderModel.SalesOrderDetails.ProductId)
+                    ?.ToList();
+
+                return salesJoin;
+                           
+                  
+
+            });
+        }
     }
 }

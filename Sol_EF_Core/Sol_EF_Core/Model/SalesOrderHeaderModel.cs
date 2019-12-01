@@ -14,6 +14,9 @@ namespace Sol_EF_Core.Model
 
 
         #region Navigation Property
+
+        public SalesOrderDetailsModel SalesOrderDetails { get; set; }
+
         public List<SalesOrderDetailsModel> ListSalesOrderDetails { get; set; }
         #endregion 
 
