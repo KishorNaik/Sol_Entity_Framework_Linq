@@ -67,7 +67,7 @@ namespace Sol_EF_Core.Repository
                         ?.SalesOrderHeader
                         ?.AsEnumerable()
                         ?.Select(this.FuncSalesOrdersColumnsMapping())
-                        ?.FirstOrDefault((lesalesOrderHeaderModel) => lesalesOrderHeaderModel.SalesOrderNumber == salesOrderHeaderModel.SalesOrderNumber);
+                        ?.FirstOrDefault((lesalesOrderHeaderModel) => lesalesOrderHeaderModel.SalesOrderID == salesOrderHeaderModel.SalesOrderID);
                         
 
                 return data;
@@ -85,7 +85,7 @@ namespace Sol_EF_Core.Repository
                     ?.SalesOrderHeader
                     ?.AsEnumerable()
                     ?.Select(this.FuncSalesOrdersColumnsMapping())
-                    ?.SingleOrDefault((leSalesOrderHeaderModel) => leSalesOrderHeaderModel.SalesOrderNumber == salesOrderHeaderModel.SalesOrderNumber);
+                    ?.SingleOrDefault((leSalesOrderHeaderModel) => leSalesOrderHeaderModel.SalesOrderID == salesOrderHeaderModel.SalesOrderID);
 
                 return data;
             
@@ -138,7 +138,7 @@ namespace Sol_EF_Core.Repository
                     adventureWorks2012Context
                     ?.SalesOrderHeader
                     ?.AsEnumerable()
-                    ?.Where((leSalesOrderHeader) => leSalesOrderHeader?.PurchaseOrderNumber == salesOrderHeaderModel.PurchaseOrderNumber)
+                    ?.Where((leSalesOrderHeader) => leSalesOrderHeader?.SalesOrderId == salesOrderHeaderModel.SalesOrderID)
                     ?.Select(this.FuncSalesOrdersColumnsMapping())
                     ?.ToList();
 
@@ -200,7 +200,7 @@ namespace Sol_EF_Core.Repository
                     TotalUnitPrice = leSalesOrderDetailsGroup.Sum((leSalesOrderDetails) => leSalesOrderDetails.UnitPrice)
 
                 })
-                ?.Where((leSalesOrderDetailsModel) => leSalesOrderDetailsModel.TotalOrderQty >= 1000)
+                ?.Where((leSalesOrderDetailsModel) => leSalesOrderDetailsModel.TotalOrderQty >= 10)
                 ?.OrderBy((leSalesOrderDetailsModel) => leSalesOrderDetailsModel.SalesOrderID)
                 ?.ThenBy((leSalesOrderDetailsModel) => leSalesOrderDetailsModel.ProductId)
                 ?.ToList();
@@ -219,7 +219,7 @@ namespace Sol_EF_Core.Repository
                 adventureWorks2012Context
                 ?.SalesOrderDetail
                 ?.AsEnumerable()
-                ?.Where((leSalesOrderDetails)=>leSalesOrderDetails.OrderQty>=100)
+                ?.Where((leSalesOrderDetails)=>leSalesOrderDetails.OrderQty>=10)
                 ?.GroupBy((leSalesOrderDetails) => new
                 {
                     leSalesOrderDetails.SalesOrderId,
@@ -234,7 +234,7 @@ namespace Sol_EF_Core.Repository
                     TotalUnitPrice = leSalesOrderDetailsGroup.Sum((leSalesOrderDetails) => leSalesOrderDetails.UnitPrice)
 
                 })
-                ?.Where((leSalesOrderDetailsModel) => leSalesOrderDetailsModel.TotalOrderQty >= 1000)
+                ?.Where((leSalesOrderDetailsModel) => leSalesOrderDetailsModel.TotalOrderQty >= 10)
                 ?.OrderBy((leSalesOrderDetailsModel) => leSalesOrderDetailsModel.SalesOrderID)
                 ?.ThenBy((leSalesOrderDetailsModel) => leSalesOrderDetailsModel.ProductId)
                 ?.ToList();
@@ -287,6 +287,54 @@ namespace Sol_EF_Core.Repository
         {
             return await Task.Run(() => {
 
+                // Get Sales Order Header Data
+                var salesOrderHeaderData =
+                    adventureWorks2012Context
+                    ?.SalesOrderHeader
+                    ?.ToList();
+
+                // Get Sales Order Details Data
+                var salesOrderDetailsData =
+                    adventureWorks2012Context
+                    ?.SalesOrderDetail
+                    ?.ToList();
+
+                var data =
+                    salesOrderHeaderData  // Parent Table Data
+                    ?.Join(
+                                salesOrderDetailsData, // Child Table Data
+                                (leSOH) => leSOH.SalesOrderId, // Parent Primary Key
+                                (leSOD) => leSOD.SalesOrderId, // Child Forign Key
+                                (leSOH, leSOD) => new SalesOrderHeaderModel()
+                                {
+                                    SalesOrderID = leSOH.SalesOrderId,
+                                    PurchaseOrderNumber = leSOH.PurchaseOrderNumber,
+                                    SalesOrderNumber = leSOH.SalesOrderNumber,
+                                    SalesOrderDetails = new SalesOrderDetailsModel()
+                                    {
+                                        SalesOrderID = leSOD.SalesOrderId,
+                                        OrderQty = leSOD.OrderQty,
+                                        UnitPrice = leSOD.UnitPrice
+                                    }
+                                }
+                            )
+                            .OrderBy((leSOH) => leSOH.SalesOrderID)
+                            .ThenBy((leSOH) => leSOH.PurchaseOrderNumber)
+                            ?.ToList();
+
+                return data;
+
+              
+                  
+
+            });
+        }
+
+        // Join With Multiple Tables (One to One)
+        public async Task<List<SalesOrderHeaderModel>> JoinMultipleQueryDemoAsync()
+        {
+            return await Task.Run(() => {
+
                 // get Sales Header Data
                 var salesOrderHeaderObj =
                      adventureWorks2012Context
@@ -299,34 +347,154 @@ namespace Sol_EF_Core.Repository
                     ?.SalesOrderDetail
                     ?.ToList();
 
-                var salesJoin =
+                // get product Model
+                var productData =
                     adventureWorks2012Context
-                    ?.SalesOrderHeader
-                    ?.Join<SalesOrderHeader, SalesOrderDetail, int, SalesOrderHeaderModel>(
-                                salesOrderDetailsData,
-                                (leSOH) => leSOH.SalesOrderId,
-                                (leSOD) => leSOD.SalesOrderId,
-                                (leSOH, leSOD) => new SalesOrderHeaderModel()
-                                {
-                                    SalesOrderID = leSOH.SalesOrderId,
-                                    PurchaseOrderNumber = leSOH.PurchaseOrderNumber,
-                                    SalesOrderNumber = leSOH.SalesOrderNumber,
-                                    SalesOrderDetails = new SalesOrderDetailsModel()
-                                    {
-                                        OrderQty = leSOD.OrderQty,
-                                        UnitPrice = leSOD.UnitPrice
-                                    }
-                                }
-                                )
-                    ?.OrderBy((leSalesOrderHeaderModel)=>leSalesOrderHeaderModel.SalesOrderID)
-                    ?.ThenBy((leSalesOrderHeaderModel)=>leSalesOrderHeaderModel.SalesOrderDetails.ProductId)
+                    ?.Product
                     ?.ToList();
 
-                return salesJoin;
-                           
-                  
+                var data =
+                        salesOrderHeaderObj
+                        ?.Join(
+                            salesOrderDetailsData,
+                            (leSOH) => leSOH.SalesOrderId,
+                            (leSOD) => leSOD.SalesOrderId,
+                            (leSOH, leSOD) => new SalesOrderHeaderModel()
+                            {
+                                SalesOrderID = leSOH.SalesOrderId,
+                                PurchaseOrderNumber = leSOH.PurchaseOrderNumber,
+                                SalesOrderNumber = leSOH.SalesOrderNumber,
+                                SalesOrderDetails = new SalesOrderDetailsModel()
+                                {
+                                    SalesOrderID = leSOD.SalesOrderId,
+                                    ProductId = leSOD.ProductId,
+                                    OrderQty = leSOD.OrderQty,
+                                    UnitPrice = leSOD.UnitPrice
+                                }
+                            }
+                            )
+                        ?.Join(
+                                productData,
+                                (leSOHM) => leSOHM.SalesOrderDetails.ProductId,
+                                (leProduct) => leProduct.ProductId,
+                                (leSOHM, leProduct) => new SalesOrderHeaderModel()
+                                {
+                                    SalesOrderID = leSOHM.SalesOrderID,
+                                    PurchaseOrderNumber = leSOHM.PurchaseOrderNumber,
+                                    SalesOrderNumber = leSOHM.SalesOrderNumber,
+                                    SalesOrderDetails = leSOHM.SalesOrderDetails,
+                                    Products = new Model.ProductModel()
+                                    {
+                                        ProductId = leProduct.ProductId,
+                                        Name = leProduct.Name
+                                    }
+                                }
+                            )
+                        ?.ToList();
 
+
+                return data;
             });
+        }
+
+        // Group Join
+        public async Task<IEnumerable<SalesOrderHeaderModel>> GroupJoinQueryDemo()
+        {
+            try
+            {
+                return await Task.Run(() =>
+                {
+                    // Get Sales Order Header Data
+                    var salesOrderHeaderData =
+                        adventureWorks2012Context
+                        ?.SalesOrderHeader
+                        ?.ToList();
+
+                    // Get Sales Order Details Data
+                    var salesOrderDetailsData =
+                        adventureWorks2012Context
+                        ?.SalesOrderDetail
+                        ?.ToList();
+
+                    // Perform Group Join
+                    var data =
+                            salesOrderHeaderData  // Parent Table Data
+                            ?.GroupJoin(
+                                    salesOrderDetailsData, // Child Table Data
+                                    (leSOH) => leSOH.SalesOrderId, // Parent Primary Key
+                                    (leSOD) => leSOD.SalesOrderId, // Child Forign Key
+                                    (leSOH, leGroupSOD) => new SalesOrderHeaderModel()
+                                    {
+                                        SalesOrderID = leSOH.SalesOrderId,
+                                        PurchaseOrderNumber = leSOH.PurchaseOrderNumber,
+                                        SalesOrderNumber = leSOH.SalesOrderNumber,
+                                        SalesOrderDetails = new SalesOrderDetailsModel()
+                                        {
+                                            TotalOrderQty = leGroupSOD.Sum((leSODGroup) => leSODGroup.OrderQty),
+                                            TotalUnitPrice = leGroupSOD.Sum((leSODGroup) => leSODGroup.UnitPrice)
+                                        }
+                                    }
+                                )
+                                ?.Where((leGroupData) => leGroupData.SalesOrderDetails.TotalOrderQty >= 10)
+                                ?.OrderBy((leGroupData) => leGroupData.SalesOrderID)
+                                ?.ThenBy((leGroupData) => leGroupData.SalesOrderNumber)
+                                ?.ToList();
+
+                    return data;
+                });
+            }
+            finally
+            { }
+        }
+
+        // Group Join with Having
+        public async Task<IEnumerable<SalesOrderHeaderModel>> GroupJoinWithHavingQueryDemo()
+        {
+            try
+            {
+                return await Task.Run(() =>
+                {
+                    // Get Sales Order Header Data
+                    var salesOrderHeaderData =
+                        adventureWorks2012Context
+                        ?.SalesOrderHeader
+                        ?.ToList();
+
+                    // Get Sales Order Details Data
+                    var salesOrderDetailsData =
+                        adventureWorks2012Context
+                        ?.SalesOrderDetail
+                        ?.ToList();
+
+                    // Perform Group Join
+                    var data =
+                            salesOrderHeaderData  // Parent Table Data
+                            ?.GroupJoin(
+                                    salesOrderDetailsData, // Child Table Data
+                                    (leSOH) => leSOH.SalesOrderId, // Parent Primary Key
+                                    (leSOD) => leSOD.SalesOrderId, // Child Forign Key
+                                    (leSOH, leGroupSOD) => new SalesOrderHeaderModel()
+                                    {
+                                        SalesOrderID = leSOH.SalesOrderId,
+                                        PurchaseOrderNumber = leSOH.PurchaseOrderNumber,
+                                        SalesOrderNumber = leSOH.SalesOrderNumber,
+                                        SalesOrderDetails = new SalesOrderDetailsModel()
+                                        {
+                                            TotalOrderQty = leGroupSOD.Sum((leSODGroup) => leSODGroup.OrderQty),
+                                            TotalUnitPrice = leGroupSOD.Sum((leSODGroup) => leSODGroup.UnitPrice)
+                                        }
+                                    }
+                                )
+                                ?.Where((leGroupData) => leGroupData.SalesOrderDetails.TotalOrderQty >= 10)
+                                ?.OrderBy((leGroupData) => leGroupData.SalesOrderID)
+                                ?.ThenBy((leGroupData) => leGroupData.SalesOrderNumber)
+                                ?.ToList();
+
+                    return data;
+                });
+            }
+            finally
+            { }
         }
     }
 }

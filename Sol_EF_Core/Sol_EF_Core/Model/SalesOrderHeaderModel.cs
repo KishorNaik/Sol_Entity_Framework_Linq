@@ -18,6 +18,8 @@ namespace Sol_EF_Core.Model
         public SalesOrderDetailsModel SalesOrderDetails { get; set; }
 
         public List<SalesOrderDetailsModel> ListSalesOrderDetails { get; set; }
+
+        public ProductModel Products { get; set; }
         #endregion 
 
     }
